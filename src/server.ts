@@ -1,14 +1,38 @@
-import express from "express";
-import "dotenv/config";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
+import { closeDatabase, connectDatabase } from "../db/client.js";
+import { createApp } from "./app.js";
 
-const app = express();
+async function startServer(): Promise<void> {
+  await connectDatabase();
 
-function startServer() {
-    const PORT = process.env.PORT || 5000;
+  const app = createApp();
 
-    app.listen(PORT, () => {
-        console.log(`Server started on http://localhost:${PORT}`);
-    }) 
+  const server = app.listen(env.PORT, () => {
+    logger.info(`Server running on http://localhost:${env.PORT}`);
+    logger.info(`Swagger docs available at http://localhost:${env.PORT}/api/docs`);
+  });
+
+  const shutdown = (signal: string): void => {
+    logger.info(`${signal} received, shutting down gracefully`);
+
+    server.close((err) => {
+      closeDatabase().catch((dbErr: unknown) => {
+        logger.error({ err: dbErr }, "Error while closing database connection");
+      });
+    });
+
+    setTimeout(() => {
+      logger.error("Forced shutdown after timeout");
+      process.exit(1);
+    }, 10_000).unref();
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
-startServer();
+startServer().catch((err: unknown) => {
+  logger.error({ err }, "Failed to start server");
+  process.exit(1);
+});
