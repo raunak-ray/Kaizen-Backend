@@ -15,6 +15,11 @@ const envSchema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
   COOKIE_SECURE: z.coerce.boolean().default(false),
   COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
+
+  // JWT Config
+  JWT_SECRET: z.string(),
+  JWT_ACCESS_EXPIRES_IN: z.string(),
+  JWT_REFRESH_EXPIRES_IN: z.string(),
 });
 
 function loadEnv() {
