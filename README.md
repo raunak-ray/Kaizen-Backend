@@ -1,7 +1,8 @@
 # Kaizen Backend
 
-Production-ready Express + TypeScript backend foundation. No business logic, authentication, or
-database schema is implemented here — this is the scaffold every future module builds on.
+Production-ready Express + TypeScript backend. Ships with a foundation scaffold (config, error
+handling, response envelope, validation) plus a complete Authentication module — see
+[`src/modules/auth/README.md`](src/modules/auth/README.md) for auth-specific details.
 
 ## Stack
 
@@ -21,17 +22,20 @@ Copy the example file and fill in your local values:
 cp .env.example .env
 ```
 
-| Variable           | Description                                | Default       |
-| ------------------ | ------------------------------------------ | ------------- |
-| `NODE_ENV`         | `development` \| `test` \| `production`    | `development` |
-| `PORT`             | HTTP port                                  | `5000`        |
-| `API_PREFIX`       | Prefix reserved for future API routes      | `/api`        |
-| `DATABASE_URL`     | PostgreSQL connection string               | —             |
-| `CORS_ORIGIN`      | Allowed origin(s), comma-separated, or `*` | `*`           |
-| `LOG_LEVEL`        | Pino log level                             | `info`        |
-| `COOKIE_DOMAIN`    | Domain for cookies                         | —             |
-| `COOKIE_SECURE`    | `true` \| `false`                          | `false`       |
-| `COOKIE_SAME_SITE` | `lax` \| `strict` \| `none`                | `lax`         |
+| Variable                 | Description                                     | Default       |
+| ------------------------ | ----------------------------------------------- | ------------- |
+| `NODE_ENV`               | `development` \| `test` \| `production`         | `development` |
+| `PORT`                   | HTTP port                                       | `5000`        |
+| `API_PREFIX`             | Prefix reserved for future API routes           | `/api`        |
+| `DATABASE_URL`           | PostgreSQL connection string                    | —             |
+| `CORS_ORIGIN`            | Allowed origin(s), comma-separated, or `*`      | `*`           |
+| `LOG_LEVEL`              | Pino log level                                  | `info`        |
+| `COOKIE_DOMAIN`          | Domain for cookies                              | —             |
+| `COOKIE_SECURE`          | `true` \| `false`                               | `false`       |
+| `COOKIE_SAME_SITE`       | `lax` \| `strict` \| `none`                     | `lax`         |
+| `JWT_SECRET`             | HMAC signing secret for access & refresh tokens | —             |
+| `JWT_ACCESS_EXPIRES_IN`  | Access token lifetime (e.g. `15m`, `1d`)        | —             |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh token lifetime (e.g. `7d`, `30d`)       | —             |
 
 Environment variables are validated with Zod on startup (`config/env.ts`). The app refuses to
 start if configuration is invalid or missing.
@@ -121,7 +125,9 @@ backend/
 │   ├── utils/
 │   ├── routes/
 │   │   └── health.ts
-│   └── modules/          # future feature modules (auth, orgs, projects, ...)
+│   └── modules/
+│       └── auth/         # registration, login, refresh rotation, logout, /me
+│           └── README.md # auth-specific flow, JWT versioning, security notes
 │
 ├── tests/
 ├── drizzle.config.ts
@@ -135,11 +141,20 @@ Every endpoint returns the same envelope:
 
 ```jsonc
 // success
-{ "success": true, "data": { }, "error": null }
+{ "success": true, "statusCode": 200, "message": "...", "data": { } }
 
 // failure
-{ "success": false, "data": null, "error": { "code": "...", "message": "..." } }
+{ "success": false, "statusCode": 400, "error": { "code": "...", "message": "..." } }
 ```
 
-Use `successResponse` / `errorResponse` from `src/lib/responses` and throw `AppError` from
-`src/lib/errors` in future modules to stay consistent with this format.
+Use `successResponse(res, statusCode, message, data)` / `errorResponse(res, statusCode, code, message, details?)`
+from `src/lib/responses` and throw `AppError` from `src/lib/errors` in future modules to stay
+consistent with this format.
+
+## Authentication
+
+A complete Authentication module lives at `src/modules/auth/` — registration, login, `/me`,
+access/refresh tokens with rotation, JWT versioning (so logout invalidates every issued token
+without a blacklist), and an `authenticate` middleware for protecting routes in other modules.
+See [`src/modules/auth/README.md`](src/modules/auth/README.md) for the full flow, security
+considerations, and endpoint reference.
