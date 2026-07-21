@@ -18,6 +18,10 @@ export function createApp(): Application {
   const app = express();
 
   app.disable("x-powered-by");
+  // Number of reverse-proxy hops to trust for X-Forwarded-For; required for
+  // req.ip (and therefore IP-based rate limiting) to reflect the real client
+  // rather than the proxy when deployed behind a load balancer.
+  app.set("trust proxy", env.TRUST_PROXY);
 
   app.use(requestId);
   app.use(

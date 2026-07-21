@@ -16,10 +16,43 @@ const envSchema = z.object({
   COOKIE_SECURE: z.coerce.boolean().default(false),
   COOKIE_SAME_SITE: z.enum(["lax", "strict", "none"]).default("lax"),
 
+  // Number of hops (reverse proxies/load balancers) to trust when reading
+  // the client IP from X-Forwarded-For. Required for correct per-IP rate
+  // limiting in production; 0 means "trust no proxy, use the socket IP".
+  TRUST_PROXY: z.coerce.number().int().nonnegative().default(0),
+
   // JWT Config
   JWT_SECRET: z.string(),
   JWT_ACCESS_EXPIRES_IN: z.string(),
   JWT_REFRESH_EXPIRES_IN: z.string(),
+  JWT_ISSUER: z.string().default("kaizen-backend"),
+  JWT_AUDIENCE: z.string().default("kaizen-app"),
+
+  // Rate limiting
+  RATE_LIMIT_AUTH_REGISTER_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(15 * 60 * 1000),
+  RATE_LIMIT_AUTH_REGISTER_MAX: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_AUTH_LOGIN_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 1000),
+  RATE_LIMIT_AUTH_LOGIN_MAX: z.coerce.number().int().positive().default(10),
+  RATE_LIMIT_AUTH_REFRESH_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 1000),
+  RATE_LIMIT_AUTH_REFRESH_MAX: z.coerce.number().int().positive().default(30),
+  RATE_LIMIT_AUTH_ME_WINDOW_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(60 * 1000),
+  RATE_LIMIT_AUTH_ME_MAX: z.coerce.number().int().positive().default(100),
 });
 
 function loadEnv() {

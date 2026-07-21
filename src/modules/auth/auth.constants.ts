@@ -5,10 +5,18 @@ export const TOKEN_TYPES = {
 
 export const JWT_ALGORITHM = "HS256" as const;
 
+// Explicit allow-list passed to jwt.verify — never trust the algorithm from
+// the token header (protects against "none"/algorithm-confusion attacks).
+export const JWT_ALGORITHMS = [JWT_ALGORITHM] as const;
+
 export const BCRYPT_SALT_ROUNDS = 10;
 
 // At least 8 characters, one uppercase, one lowercase, one digit.
 export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+
+// bcrypt silently truncates input beyond 72 bytes; reject longer passwords
+// instead of accepting them and hashing only a prefix.
+export const PASSWORD_MAX_LENGTH = 72;
 
 export const AUTH_ERRORS = {
   USER_ALREADY_EXISTS: {

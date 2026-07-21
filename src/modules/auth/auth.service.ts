@@ -3,9 +3,16 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
 import { env } from "@config/env";
 import { AppError } from "@/lib/errors";
+import { auditService, type AuditContext } from "@/lib/audit";
 import * as authRepository from "./auth.repository";
 import type { AuthUserRow } from "./auth.repository";
-import { AUTH_ERRORS, BCRYPT_SALT_ROUNDS, JWT_ALGORITHM, TOKEN_TYPES } from "./auth.constants";
+import {
+  AUTH_ERRORS,
+  BCRYPT_SALT_ROUNDS,
+  JWT_ALGORITHM,
+  JWT_ALGORITHMS,
+  TOKEN_TYPES,
+} from "./auth.constants";
 import type {
   AuthenticatedUser,
   AuthResponse,
@@ -18,7 +25,7 @@ import type {
 } from "./auth.types";
 
 class AuthService {
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto, context: AuditContext = {}): Promise<AuthResponse> {
     const existingUser = await authRepository.findByEmail(dto.email);
 
     if (existingUser) {
@@ -38,16 +45,27 @@ class AuthService {
       lastName: dto.lastName,
     });
 
+    auditService.log({
+      event: "USER_REGISTERED",
+      userId: user.id,
+      ip: context.ip,
+    });
+
     return {
       user: this.mapUser(user),
       tokens: this.generateTokens(user),
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto, context: AuditContext = {}): Promise<AuthResponse> {
     const user = await authRepository.findByEmail(dto.email);
 
     if (!user) {
+      auditService.log({
+        event: "LOGIN_FAILED",
+        ip: context.ip,
+        metadata: { email: dto.email, reason: "invalid_credentials" },
+      });
       throw new AppError(
         AUTH_ERRORS.INVALID_CREDENTIALS.message,
         401,
@@ -58,6 +76,12 @@ class AuthService {
     const isPasswordValid = await this.comparePassword(dto.password, user.password_hash);
 
     if (!isPasswordValid) {
+      auditService.log({
+        event: "LOGIN_FAILED",
+        userId: user.id,
+        ip: context.ip,
+        metadata: { email: dto.email, reason: "invalid_credentials" },
+      });
       throw new AppError(
         AUTH_ERRORS.INVALID_CREDENTIALS.message,
         401,
@@ -66,6 +90,12 @@ class AuthService {
     }
 
     if (!user.is_active) {
+      auditService.log({
+        event: "LOGIN_FAILED",
+        userId: user.id,
+        ip: context.ip,
+        metadata: { email: dto.email, reason: "account_inactive" },
+      });
       throw new AppError(
         AUTH_ERRORS.ACCOUNT_INACTIVE.message,
         403,
@@ -73,13 +103,19 @@ class AuthService {
       );
     }
 
+    auditService.log({
+      event: "LOGIN_SUCCEEDED",
+      userId: user.id,
+      ip: context.ip,
+    });
+
     return {
       user: this.mapUser(user),
       tokens: this.generateTokens(user),
     };
   }
 
-  async refresh(dto: RefreshDto): Promise<AuthTokens> {
+  async refresh(dto: RefreshDto, context: AuditContext = {}): Promise<AuthTokens> {
     const payload = this.verifyRefreshToken(dto.refreshToken);
 
     const user = await authRepository.findById(payload.sub);
@@ -98,11 +134,25 @@ class AuthService {
       );
     }
 
-    return this.generateTokens(user);
+    const tokens = this.generateTokens(user);
+
+    auditService.log({
+      event: "TOKEN_REFRESHED",
+      userId: user.id,
+      ip: context.ip,
+    });
+
+    return tokens;
   }
 
-  async logout(userId: string): Promise<void> {
+  async logout(userId: string, context: AuditContext = {}): Promise<void> {
     await authRepository.incrementJwtVersion(userId);
+
+    auditService.log({
+      event: "USER_LOGGED_OUT",
+      userId,
+      ip: context.ip,
+    });
   }
 
   async getCurrentUser(userId: string): Promise<AuthenticatedUser> {
@@ -168,6 +218,8 @@ class AuthService {
     return jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: expiresIn as SignOptions["expiresIn"],
       algorithm: JWT_ALGORITHM,
+      issuer: env.JWT_ISSUER,
+      audience: env.JWT_AUDIENCE,
     });
   }
 
@@ -184,7 +236,9 @@ class AuthService {
 
     try {
       payload = jwt.verify(token, env.JWT_SECRET, {
-        algorithms: [JWT_ALGORITHM],
+        algorithms: [...JWT_ALGORITHMS],
+        issuer: env.JWT_ISSUER,
+        audience: env.JWT_AUDIENCE,
       }) as JwtPayload;
     } catch (err) {
       if (err instanceof jwt.TokenExpiredError) {

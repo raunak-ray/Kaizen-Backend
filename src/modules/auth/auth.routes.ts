@@ -4,6 +4,7 @@ import * as authController from "./auth.controller";
 import { authenticate } from "./auth.middleware";
 import { loginSchema, refreshSchema, registerSchema } from "./auth.schema";
 import "./auth.swagger";
+import { authRateLimiters } from "./auth.rate-limit";
 
 const authRouter = Router();
 
@@ -47,7 +48,12 @@ const authRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-authRouter.post("/register", validate({ body: registerSchema }), authController.register);
+authRouter.post(
+  "/register",
+  authRateLimiters.register,
+  validate({ body: registerSchema }),
+  authController.register,
+);
 
 /**
  * @openapi
@@ -95,7 +101,12 @@ authRouter.post("/register", validate({ body: registerSchema }), authController.
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-authRouter.post("/login", validate({ body: loginSchema }), authController.login);
+authRouter.post(
+  "/login",
+  authRateLimiters.login,
+  validate({ body: loginSchema }),
+  authController.login,
+);
 
 /**
  * @openapi
@@ -143,7 +154,12 @@ authRouter.post("/login", validate({ body: loginSchema }), authController.login)
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-authRouter.post("/refresh", validate({ body: refreshSchema }), authController.refresh);
+authRouter.post(
+  "/refresh",
+  authRateLimiters.refresh,
+  validate({ body: refreshSchema }),
+  authController.refresh,
+);
 
 /**
  * @openapi
@@ -204,6 +220,6 @@ authRouter.post("/logout", authenticate, authController.logout);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-authRouter.get("/me", authenticate, authController.me);
+authRouter.get("/me", authenticate, authRateLimiters.me, authController.me);
 
 export default authRouter;
