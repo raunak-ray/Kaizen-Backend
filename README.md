@@ -155,6 +155,9 @@ consistent with this format.
 
 A complete Authentication module lives at `src/modules/auth/` — registration, login, `/me`,
 access/refresh tokens with rotation, JWT versioning (so logout invalidates every issued token
-without a blacklist), and an `authenticate` middleware for protecting routes in other modules.
-See [`src/modules/auth/README.md`](src/modules/auth/README.md) for the full flow, security
-considerations, and endpoint reference.
+without a blacklist), rate limiting, and audit logging.
+
+- New to the project or non-technical? Start with [`docs/auth/overview.md`](docs/auth/overview.md).
+- Working in the code? See [`src/modules/auth/README.md`](src/modules/auth/README.md) for the
+  full flow, security considerations, and endpoint reference.
+- Full docs set: [`docs/auth/`](docs/auth/overview.md) (overview, architecture, security, roadmap).
