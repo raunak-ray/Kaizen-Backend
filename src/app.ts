@@ -12,6 +12,7 @@ import { globalErrorHandler, notFoundHandler } from "./lib/errors/index";
 import { requestId } from "./lib/middleware/index";
 import { healthRouter } from "./routes/health";
 import authRouter from "@/modules/auth/auth.routes";
+import projectRouter from "@/modules/projects/project.routes";
 import { env } from "../config/env";
 
 export function createApp(): Application {
@@ -62,6 +63,7 @@ export function createApp(): Application {
 
   app.use(env.API_PREFIX, healthRouter);
   app.use(`${env.API_PREFIX}/auth`, authRouter);
+  app.use(`${env.API_PREFIX}/projects`, projectRouter);
 
   app.use(notFoundHandler);
   app.use(globalErrorHandler);
