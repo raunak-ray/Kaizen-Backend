@@ -9,14 +9,14 @@ async function startServer(): Promise<void> {
   const app = createApp();
 
   const server = app.listen(env.PORT, () => {
-    logger.info(`Server running on http://localhost:${env.PORT}`);
-    logger.info(`Swagger docs available at http://localhost:${env.PORT}/api/docs`);
+    logger.info(`Server running on: http://localhost:${env.PORT}`);
+    logger.info(`Swagger docs available at: http://localhost:${env.PORT}/api/docs`);
   });
 
   const shutdown = (signal: string): void => {
     logger.info(`${signal} received, shutting down gracefully`);
 
-    server.close((err) => {
+    server.close(() => {
       closeDatabase().catch((dbErr: unknown) => {
         logger.error({ err: dbErr }, "Error while closing database connection");
       });
