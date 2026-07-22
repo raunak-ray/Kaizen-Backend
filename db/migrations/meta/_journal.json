@@ -15,6 +15,13 @@
       "when": 1784621229017,
       "tag": "0001_worried_dark_phoenix",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784741163124,
+      "tag": "0002_misty_champions",
+      "breakpoints": true
     }
   ]
 }
