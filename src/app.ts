@@ -1,22 +1,27 @@
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import express, { type Application, type Request, type Response } from "express";
+import express, { type Application } from "express";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import swaggerUi from "swagger-ui-express";
-import { logger } from "../config/logger.js";
-import { corsOptions, helmetOptions } from "../config/security.js";
-import { swaggerSpec } from "../config/swagger.js";
-import { globalErrorHandler, notFoundHandler } from "./lib/errors/index.js";
-import { requestId } from "./lib/middleware/index.js";
-import { healthRouter } from "./routes/health.js";
-import { env } from "../config/env.js";
+import { logger } from "../config/logger";
+import { corsOptions, helmetOptions } from "../config/security";
+import { swaggerSpec } from "../config/swagger";
+import { globalErrorHandler, notFoundHandler } from "./lib/errors/index";
+import { requestId } from "./lib/middleware/index";
+import { healthRouter } from "./routes/health";
+import authRouter from "@/modules/auth/auth.routes";
+import { env } from "../config/env";
 
 export function createApp(): Application {
   const app = express();
 
   app.disable("x-powered-by");
+  // Number of reverse-proxy hops to trust for X-Forwarded-For; required for
+  // req.ip (and therefore IP-based rate limiting) to reflect the real client
+  // rather than the proxy when deployed behind a load balancer.
+  app.set("trust proxy", env.TRUST_PROXY);
 
   app.use(requestId);
   app.use(
@@ -56,6 +61,7 @@ export function createApp(): Application {
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   app.use(env.API_PREFIX, healthRouter);
+  app.use(`${env.API_PREFIX}/auth`, authRouter);
 
   app.use(notFoundHandler);
   app.use(globalErrorHandler);

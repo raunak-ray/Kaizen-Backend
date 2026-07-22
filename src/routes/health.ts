@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { successResponse } from "../lib/responses/index.js";
 import { formatUptime } from "../utils/uptime.js";
-import { env } from "../../config/env.js";
 
 export const healthRouter = Router();
 
@@ -16,11 +15,9 @@ export const healthRouter = Router();
  *         description: Server is healthy
  */
 healthRouter.get(`/health`, (_req, res) => {
-  res.status(200).json(
-    successResponse({
-      status: "ok",
-      uptime: formatUptime(process.uptime()),
-      timestamp: new Date().toISOString(),
-    }),
-  );
+  successResponse(res, 200, "Server is healthy", {
+    status: "ok",
+    uptime: formatUptime(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
 });

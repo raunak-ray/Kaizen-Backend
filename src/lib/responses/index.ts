@@ -1,29 +1,45 @@
+import { Response } from "express";
+
 export interface SuccessResponse<T> {
   success: true;
-  data: T;
-  error: null;
-}
-
-export interface ErrorPayload {
-  code: string;
+  statusCode: number;
   message: string;
-  details?: unknown;
+  data: T;
 }
 
 export interface ErrorResponse {
   success: false;
-  data: null;
-  error: ErrorPayload;
-}
-
-export function successResponse<T>(data: T): SuccessResponse<T> {
-  return { success: true, data, error: null };
-}
-
-export function errorResponse(code: string, message: string, details?: unknown): ErrorResponse {
-  return {
-    success: false,
-    data: null,
-    error: details === undefined ? { code, message } : { code, message, details },
+  statusCode: number;
+  error: {
+    code: string;
+    message: string;
+    details?: object;
   };
+}
+
+export function successResponse<T>(res: Response, statusCode: number, message: string, data: T) {
+  return res.status(statusCode).json({
+    success: true,
+    statusCode,
+    message,
+    data,
+  });
+}
+
+export function errorResponse(
+  res: Response,
+  statusCode: number,
+  code: string,
+  message: string,
+  details?: unknown,
+) {
+  return res.status(statusCode).json({
+    success: false,
+    statusCode,
+    error: {
+      code,
+      message,
+      ...(details !== undefined && { details }),
+    },
+  });
 }

@@ -1,8 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "paths": {
+      "@/*": ["./src/*"],
+      "@config/*": ["./config/*"],
+      "@db/*": ["./db/*"],
+      "@tests/*": ["./tests/*"]
+    },
+
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -10,7 +18,5 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"]
-  },
-  "include": ["src", "config", "db", "tests", "drizzle.config.ts", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist", "db/migrations"]
+  }
 }
