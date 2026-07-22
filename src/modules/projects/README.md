@@ -3,6 +3,10 @@
 Self-contained project-management module for the Kaizen backend: project creation, retrieval,
 listing, updates, archiving, and deletion.
 
+> Looking for the "why" behind these decisions, or a non-technical explanation? See
+> [`docs/projects/`](../../../docs/projects/overview.md). This README covers the "what" and "how"
+> for developers working in this module.
+
 ## Overview
 
 Projects are the primary aggregate of the domain model — every issue, board, sprint, and report
@@ -119,6 +123,24 @@ repository only exposes `existsByKey` and knows nothing about the generation alg
 Archived projects cannot be updated (`409 PROJECT_ARCHIVED`); deletion is permanent for both
 archived and active projects.
 
+## Logging
+
+Every operation in `project.service.ts` writes a structured line through the shared Pino `logger`
+(`config/logger.ts`) — this module previously logged nothing at all, so every mutation and every
+rejected attempt is now traceable:
+
+| Level   | Emitted on                                                                                                                    |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `info`  | A successful create, update, archive, or delete                                                                               |
+| `warn`  | A rejected attempt: project not found, non-owner action, archived-conflict, private-project access, key-generation exhaustion |
+| `debug` | A successful read (`findById`/`findAll`) or a resolved key collision                                                          |
+
+Every line carries structured context (`projectId`, `userId`/`ownerId`, `operation`) so it's
+greppable — e.g. `grep '"projectId":"<id>"'` reconstructs everything that happened to one project.
+This is a lighter-weight, direct use of the shared logger, not the same mechanism as Auth's
+`AuditLogger` (`src/lib/audit/`); see [`docs/projects/security.md`](../../../docs/projects/security.md#operational-logging)
+for why the two are intentionally different.
+
 ## Environment Variables
 
 None. This module has no configuration of its own — it uses the shared `DATABASE_URL` and the
@@ -170,3 +192,10 @@ Full request/response schemas are documented via Swagger at `/api/docs`.
   being stable (`PROJ-123`).
 - **Archived is a one-way gate for updates, not for reads or deletes.** Archived projects still
   show up in list/get and can still be deleted — only `PATCH /:id` is blocked.
+
+## See also
+
+- [`docs/projects/overview.md`](../../../docs/projects/overview.md) — why this module exists, in plain language
+- [`docs/projects/architecture.md`](../../../docs/projects/architecture.md) — request flows and logging levels, with diagrams
+- [`docs/projects/security.md`](../../../docs/projects/security.md) — each control and why it exists
+- [`docs/projects/roadmap.md`](../../../docs/projects/roadmap.md) — deferred work and how this design accommodates it
