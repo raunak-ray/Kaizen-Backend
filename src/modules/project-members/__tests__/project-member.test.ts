@@ -100,6 +100,27 @@ describe("Project Members module", () => {
     expect(nonexistent.body.error.code).toBe("USER_NOT_FOUND");
   });
 
+  it("returns a conflict when concurrent invitations target the same user", async () => {
+    const { owner, projectId } = await setupProject();
+    const invitee = await registerUser();
+
+    const [first, second] = await Promise.all([
+      request(app)
+        .post(membersUrl(projectId))
+        .set("Authorization", `Bearer ${owner.accessToken}`)
+        .send({ userId: invitee.userId }),
+      request(app)
+        .post(membersUrl(projectId))
+        .set("Authorization", `Bearer ${owner.accessToken}`)
+        .send({ userId: invitee.userId }),
+    ]);
+
+    expect([first.status, second.status].sort()).toEqual([201, 409]);
+    expect([first, second].find((response) => response.status === 409)?.body.error.code).toBe(
+      "MEMBER_ALREADY_EXISTS",
+    );
+  });
+
   it("lists, updates, and removes project members", async () => {
     const { owner, projectId } = await setupProject();
     const invitee = await registerUser();

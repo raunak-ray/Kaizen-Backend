@@ -21,15 +21,34 @@ class ProjectMemberService {
 
     const user = await authRepository.findById(dto.userId);
     if (!user) {
+      logger.warn({ projectId, userId: dto.userId }, "Cannot invite unknown user to project");
       throw this.error("USER_NOT_FOUND", 404);
     }
 
     await this.ensureMemberDoesNotExist(projectId, dto.userId);
-    const member = await projectMemberRepository.create({
-      projectId,
-      userId: dto.userId,
-      role: dto.role ?? PROJECT_ROLES.MEMBER,
-    });
+    let member: projectMemberRepository.ProjectMemberRow;
+
+    try {
+      member = await projectMemberRepository.create({
+        projectId,
+        userId: dto.userId,
+        role: dto.role ?? PROJECT_ROLES.MEMBER,
+      });
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        logger.warn(
+          { projectId, userId: dto.userId },
+          "Duplicate project member invitation blocked",
+        );
+        throw this.error("MEMBER_ALREADY_EXISTS", 409);
+      }
+      throw error;
+    }
 
     logger.info({ projectId, memberId: member.id, userId: dto.userId }, "Project member invited");
     return this.mapMember({ ...member, user });
@@ -38,6 +57,7 @@ class ProjectMemberService {
   async findAll(projectId: string): Promise<ProjectMemberResponse[]> {
     await this.validateMembership(projectId);
     const members = await projectMemberRepository.findAll(projectId);
+    logger.debug({ projectId, count: members.length }, "Project members listed");
     return members.map((member) => this.mapMember(member));
   }
 
@@ -51,6 +71,7 @@ class ProjectMemberService {
     const member = await this.ensureMemberExists(projectId, memberId);
 
     if (member.role === PROJECT_ROLES.OWNER || member.user_id === project.owner_id) {
+      logger.warn({ projectId, memberId, userId: member.user_id }, "Owner role change blocked");
       throw this.error("OWNER_ROLE_CANNOT_BE_CHANGED", 409);
     }
 
@@ -80,9 +101,14 @@ class ProjectMemberService {
   ): Promise<projectRepository.ProjectRow> {
     const project = await projectRepository.findById(projectId);
     if (!project) {
+      logger.warn({ projectId, userId }, "Project membership action requested for missing project");
       throw this.error("PROJECT_NOT_FOUND", 404);
     }
     if (project.owner_id !== userId) {
+      logger.warn(
+        { projectId, ownerId: project.owner_id, userId },
+        "Non-owner project membership action blocked",
+      );
       throw this.error("FORBIDDEN", 403);
     }
     return project;
@@ -91,12 +117,14 @@ class ProjectMemberService {
   private async validateMembership(projectId: string): Promise<void> {
     const project = await projectRepository.findById(projectId);
     if (!project) {
+      logger.warn({ projectId }, "Project membership listing requested for missing project");
       throw this.error("PROJECT_NOT_FOUND", 404);
     }
   }
 
   private async ensureMemberDoesNotExist(projectId: string, userId: string): Promise<void> {
     if (await projectMemberRepository.exists(projectId, userId)) {
+      logger.warn({ projectId, userId }, "Duplicate project member invitation blocked");
       throw this.error("MEMBER_ALREADY_EXISTS", 409);
     }
   }
@@ -107,6 +135,7 @@ class ProjectMemberService {
   ): Promise<projectMemberRepository.ProjectMemberRow> {
     const member = await projectMemberRepository.findById(memberId);
     if (!member || member.project_id !== projectId) {
+      logger.warn({ projectId, memberId }, "Project member not found");
       throw this.error("MEMBER_NOT_FOUND", 404);
     }
     return member;
@@ -114,6 +143,7 @@ class ProjectMemberService {
 
   private ensureOwnerCannotBeRemoved(role: ProjectRole, isProjectOwner: boolean): void {
     if (role === PROJECT_ROLES.OWNER || isProjectOwner) {
+      logger.warn({ role, isProjectOwner }, "Project owner removal blocked");
       throw this.error("OWNER_CANNOT_BE_REMOVED", 409);
     }
   }
