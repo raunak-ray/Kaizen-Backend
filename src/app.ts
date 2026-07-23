@@ -13,6 +13,7 @@ import { requestId } from "./lib/middleware/index";
 import { healthRouter } from "./routes/health";
 import authRouter from "@/modules/auth/auth.routes";
 import projectRouter from "@/modules/projects/project.routes";
+import projectMemberRouter from "@/modules/project-members/project-member.routes";
 import { env } from "../config/env";
 
 export function createApp(): Application {
@@ -64,6 +65,7 @@ export function createApp(): Application {
   app.use(env.API_PREFIX, healthRouter);
   app.use(`${env.API_PREFIX}/auth`, authRouter);
   app.use(`${env.API_PREFIX}/projects`, projectRouter);
+  app.use(`${env.API_PREFIX}/projects/:projectId/members`, projectMemberRouter);
 
   app.use(notFoundHandler);
   app.use(globalErrorHandler);

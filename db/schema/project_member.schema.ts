@@ -13,8 +13,12 @@ export const ProjectMember = pgTable(
   "tbl_project_member",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    project_id: uuid("project_id").references(() => Project.id),
-    user_id: uuid("user_id").references(() => User.id),
+    project_id: uuid("project_id")
+      .notNull()
+      .references(() => Project.id),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => User.id),
     role: projectMemberRoleEnum("role").default("member").notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
   },
