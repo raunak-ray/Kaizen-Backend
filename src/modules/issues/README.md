@@ -2,6 +2,10 @@
 
 The Issues module owns the complete lifecycle of work items within a project: creation, retrieval, updates, assignment, status and priority transitions, archiving, restoration, and soft deletion. It is the core aggregate of the platform — future modules (comments, labels, attachments, watchers, activity, notifications, sprint planning) build on top of issues without changing this module's boundaries.
 
+> Looking for the "why" behind these decisions, or a non-technical explanation? See
+> [`docs/issues/`](../../../docs/issues/overview.md). This README covers the "what" and "how" for
+> developers working in this module.
+
 ## Structure
 
 ```text
