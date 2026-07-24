@@ -43,6 +43,13 @@
       "when": 1784791064331,
       "tag": "0005_repair_project_members_table",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784895259626,
+      "tag": "0006_add_issues_table",
+      "breakpoints": true
     }
   ]
 }

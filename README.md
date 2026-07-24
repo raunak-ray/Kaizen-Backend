@@ -1,8 +1,15 @@
 # Kaizen Backend
 
-Production-ready Express + TypeScript backend. Ships with a foundation scaffold (config, error
-handling, response envelope, validation) plus a complete Authentication module — see
-[`src/modules/auth/README.md`](src/modules/auth/README.md) for auth-specific details.
+Production-ready Express + TypeScript backend for Kaizen, a project/issue-tracking product. Ships
+with a foundation scaffold (config, error handling, response envelope, validation) plus four
+complete domain modules:
+
+| Module          | Owns                                                                   | Module README                                                                    |
+| --------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Authentication  | Accounts, JWT sessions, rate limiting, audit logging                   | [`src/modules/auth/README.md`](src/modules/auth/README.md)                       |
+| Projects        | Project creation, ownership, visibility, archiving                     | [`src/modules/projects/README.md`](src/modules/projects/README.md)               |
+| Project Members | Project-scoped membership and roles                                    | [`src/modules/project-members/README.md`](src/modules/project-members/README.md) |
+| Issues          | Work item lifecycle: create, assign, status, priority, archive, delete | [`src/modules/issues/README.md`](src/modules/issues/README.md)                   |
 
 ## Stack
 
@@ -60,8 +67,9 @@ npm run db:migrate    # run pending migrations against DATABASE_URL
 npm run db:studio     # open Drizzle Studio
 ```
 
-Schemas live in `db/schema/`, generated SQL migrations in `db/migrations/`. No tables are defined
-yet — future modules add their schema files here.
+Schemas live in `db/schema/`, generated SQL migrations in `db/migrations/`. Current tables:
+`tbl_user`, `tbl_project`, `tbl_project_member`, `tbl_issue` — one schema file per module, each
+exported from `db/schema/index.ts`. Future modules add their schema files here the same way.
 
 ## API Documentation
 
@@ -82,7 +90,11 @@ npm run test:watch
 ```
 
 Tests use Vitest + Supertest. `tests/health.test.ts` is the baseline integration test for
-`GET /health` — copy its structure for future route tests.
+`GET /health`. Each module keeps its own integration tests alongside its code in a `__tests__/`
+folder (e.g. `src/modules/issues/__tests__/issue.test.ts`) — copy that structure for future
+modules. Tests run against a real PostgreSQL database (`DATABASE_URL` under `NODE_ENV=test`), so
+run `npm run db:migrate` against that database before running tests for the first time or after
+adding a migration.
 
 ## Development Workflow
 
@@ -110,7 +122,11 @@ backend/
 │   ├── schema/          # Drizzle table definitions (per module)
 │   └── migrations/      # generated SQL migrations
 │
-├── docs/
+├── docs/                 # per-module overview/architecture/security/roadmap docs
+│   ├── auth/
+│   ├── projects/
+│   ├── project-members/
+│   └── issues/
 │
 ├── src/
 │   ├── app.ts           # Express app: middleware, swagger, routes, error handling
@@ -126,8 +142,11 @@ backend/
 │   ├── routes/
 │   │   └── health.ts
 │   └── modules/
-│       └── auth/         # registration, login, refresh rotation, logout, /me
-│           └── README.md # auth-specific flow, JWT versioning, security notes
+│       ├── auth/            # registration, login, refresh rotation, logout, /me
+│       ├── projects/        # project creation, ownership, visibility, archiving
+│       ├── project-members/ # project-scoped membership and roles
+│       └── issues/           # issue lifecycle: create, assign, status, priority, archive, delete
+│           └── README.md    # per-module: implementation reference, folder-by-folder
 │
 ├── tests/
 ├── drizzle.config.ts
@@ -151,7 +170,14 @@ Use `successResponse(res, statusCode, message, data)` / `errorResponse(res, stat
 from `src/lib/responses` and throw `AppError` from `src/lib/errors` in future modules to stay
 consistent with this format.
 
-## Authentication
+## Modules
+
+Each domain module below has two layers of documentation: a `README.md` inside the module
+(implementation reference — what each file does) and a `docs/<module>/` set (overview, architecture,
+security, roadmap — the "why" behind the design, written for both technical and non-technical
+readers).
+
+### Authentication
 
 A complete Authentication module lives at `src/modules/auth/` — registration, login, `/me`,
 access/refresh tokens with rotation, JWT versioning (so logout invalidates every issued token
@@ -161,3 +187,37 @@ without a blacklist), rate limiting, and audit logging.
 - Working in the code? See [`src/modules/auth/README.md`](src/modules/auth/README.md) for the
   full flow, security considerations, and endpoint reference.
 - Full docs set: [`docs/auth/`](docs/auth/overview.md) (overview, architecture, security, roadmap).
+
+### Projects
+
+A complete Projects module lives at `src/modules/projects/` — project creation with an
+auto-generated unique key, ownership, `private`/`public` visibility, archiving, and deletion.
+
+- New to the project or non-technical? Start with
+  [`docs/projects/overview.md`](docs/projects/overview.md).
+- Working in the code? See [`src/modules/projects/README.md`](src/modules/projects/README.md).
+- Full docs set: [`docs/projects/`](docs/projects/overview.md).
+
+### Project Members
+
+A complete Project Members module lives at `src/modules/project-members/` — inviting existing
+users into a project, listing members, changing a member's role, and removing members. Project
+metadata itself stays owned by the Projects module.
+
+- New to the project or non-technical? Start with
+  [`docs/project-members/overview.md`](docs/project-members/overview.md).
+- Working in the code? See
+  [`src/modules/project-members/README.md`](src/modules/project-members/README.md).
+- Full docs set: [`docs/project-members/`](docs/project-members/overview.md).
+
+### Issues
+
+A complete Issues module lives at `src/modules/issues/` — the platform's core aggregate. Owns
+issue creation, retrieval, listing/filtering, updates, assignment, status and priority
+transitions, archiving, restoration, and soft deletion, scoped to a project and gated on project
+membership.
+
+- New to the project or non-technical? Start with
+  [`docs/issues/overview.md`](docs/issues/overview.md).
+- Working in the code? See [`src/modules/issues/README.md`](src/modules/issues/README.md).
+- Full docs set: [`docs/issues/`](docs/issues/overview.md).
