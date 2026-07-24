@@ -10,7 +10,9 @@ interface RequestSchemas {
 export function validate(schemas: RequestSchemas) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (schemas.body) req.body = schemas.body.parse(req.body);
-    if (schemas.query) req.query = schemas.query.parse(req.query) as typeof req.query;
+    // req.query has no setter in Express 5, so the parsed result is merged
+    // into the existing object rather than assigned.
+    if (schemas.query) Object.assign(req.query, schemas.query.parse(req.query));
     if (schemas.params) req.params = schemas.params.parse(req.params) as typeof req.params;
     next();
   };
