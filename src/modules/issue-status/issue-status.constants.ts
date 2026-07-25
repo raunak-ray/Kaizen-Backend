@@ -4,7 +4,7 @@ export const ISSUE_STATUS_CATEGORY = {
   DONE: "done",
 } as const;
 
-export const DEFAULT_STATUSES: { name: string; category: string; position: number }[] = [
+export const DEFAULT_STATUSES = [
   { name: "Todo", category: ISSUE_STATUS_CATEGORY.TODO, position: 1 },
   { name: "In Progress", category: ISSUE_STATUS_CATEGORY.IN_PROGRESS, position: 2 },
   { name: "Review", category: ISSUE_STATUS_CATEGORY.IN_PROGRESS, position: 3 },
@@ -26,9 +26,5 @@ export const ISSUE_STATUS_ERRORS = {
   STATUS_NOT_ARCHIVED: {
     code: "STATUS_NOT_ARCHIVED",
     message: "Only archived statuses can be restored",
-  },
-  CANNOT_ARCHIVE_DEFAULT_STATUS: {
-    code: "CANNOT_ARCHIVE_DEFAULT_STATUS",
-    message: "Default statuses cannot be archived",
   },
 } as const;

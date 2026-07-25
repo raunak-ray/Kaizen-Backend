@@ -1,10 +1,12 @@
-import { db } from "@db/client";
-import { IssueStatusCategory } from "./issue-status.types";
-import { IssueStatus } from "@db/schema";
 import { and, eq } from "drizzle-orm";
+import { db } from "@db/client";
+import { IssueStatus } from "@db/schema";
+import type { IssueStatusCategory } from "./issue-status.types";
+
+export type IssueStatusRow = typeof IssueStatus.$inferSelect;
 
 interface CreateIssueStatusInput {
-  project_id: string;
+  projectId: string;
   name: string;
   category: IssueStatusCategory;
   position: number;
@@ -16,11 +18,11 @@ interface UpdateIssueStatusInput {
   position?: number;
 }
 
-export async function create(input: CreateIssueStatusInput) {
+export async function create(input: CreateIssueStatusInput): Promise<IssueStatusRow> {
   const [status] = await db
     .insert(IssueStatus)
     .values({
-      project_id: input.project_id,
+      project_id: input.projectId,
       name: input.name,
       category: input.category,
       position: input.position,
@@ -30,76 +32,76 @@ export async function create(input: CreateIssueStatusInput) {
   return status;
 }
 
-export async function findById(projectId: string, statusId: string) {
+export async function findById(
+  projectId: string,
+  statusId: string,
+): Promise<IssueStatusRow | undefined> {
   const [status] = await db
     .select()
     .from(IssueStatus)
-    .where(
-      and(
-        eq(IssueStatus.project_id, projectId),
-        eq(IssueStatus.id, statusId),
-        eq(IssueStatus.archived, false),
-      ),
-    );
+    .where(and(eq(IssueStatus.project_id, projectId), eq(IssueStatus.id, statusId)));
 
   return status;
 }
 
-export async function findMany(projectId: string) {
-  const statuses = await db
+export async function findMany(projectId: string): Promise<IssueStatusRow[]> {
+  return db
     .select()
     .from(IssueStatus)
-    .where(and(eq(IssueStatus.project_id, projectId), eq(IssueStatus.archived, false)))
+    .where(eq(IssueStatus.project_id, projectId))
     .orderBy(IssueStatus.position);
-  return statuses;
 }
 
-export async function update(input: UpdateIssueStatusInput) {
+export async function update(
+  statusId: string,
+  input: UpdateIssueStatusInput,
+): Promise<IssueStatusRow | undefined> {
   const [status] = await db
     .update(IssueStatus)
     .set({
-      ...(input.category !== undefined && { category: input.category }),
       ...(input.name !== undefined && { name: input.name }),
+      ...(input.category !== undefined && { category: input.category }),
       ...(input.position !== undefined && { position: input.position }),
       updated_at: new Date(),
     })
-    .returning();
-
-  return status;
-}
-
-export async function archieve(statusId: string) {
-  const [status] = await db
-    .update(IssueStatus)
-    .set({
-      archived: true,
-      updated_at: new Date(),
-    })
     .where(eq(IssueStatus.id, statusId))
     .returning();
 
   return status;
 }
 
-export async function restore(statusId: string) {
+export async function archive(statusId: string): Promise<IssueStatusRow | undefined> {
   const [status] = await db
     .update(IssueStatus)
-    .set({
-      archived: false,
-      updated_at: new Date(),
-    })
+    .set({ archived: true, updated_at: new Date() })
     .where(eq(IssueStatus.id, statusId))
     .returning();
 
   return status;
 }
 
-export async function exists(statusId: string, projectId: string) {
-  return findById(projectId, statusId) !== undefined;
+export async function restore(statusId: string): Promise<IssueStatusRow | undefined> {
+  const [status] = await db
+    .update(IssueStatus)
+    .set({ archived: false, updated_at: new Date() })
+    .where(eq(IssueStatus.id, statusId))
+    .returning();
+
+  return status;
 }
 
-export async function findByName(statusName: string) {
-  const [status] = await db.select().from(IssueStatus).where(eq(IssueStatus.name, statusName));
+export async function exists(projectId: string, statusId: string): Promise<boolean> {
+  return (await findById(projectId, statusId)) !== undefined;
+}
+
+export async function findByName(
+  projectId: string,
+  name: string,
+): Promise<IssueStatusRow | undefined> {
+  const [status] = await db
+    .select()
+    .from(IssueStatus)
+    .where(and(eq(IssueStatus.project_id, projectId), eq(IssueStatus.name, name)));
 
   return status;
 }
