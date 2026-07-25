@@ -44,6 +44,8 @@ class IssueStatusService {
     await this.validateMembership(projectId, userId);
     const status = await this.ensureStatusExists(projectId, statusId);
 
+    logger.debug({ statusId, projectId, userId }, "Issue status retrieved");
+
     return this.mapStatus(status);
   }
 
@@ -51,6 +53,8 @@ class IssueStatusService {
     await this.validateMembership(projectId, userId);
 
     const statuses = await issueStatusRepository.findMany(projectId);
+
+    logger.debug({ projectId, userId, count: statuses.length }, "Issue statuses listed");
 
     return statuses.map((status) => this.mapStatus(status));
   }
