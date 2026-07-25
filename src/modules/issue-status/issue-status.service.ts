@@ -1,16 +1,19 @@
 import { logger } from "@config/logger";
+import { db } from "@db/client";
 import { AppError } from "@/lib/errors";
 import * as projectMemberRepository from "@/modules/project-members/project-member.repository";
 import * as projectRepository from "@/modules/projects/project.repository";
 import type { ProjectRow } from "@/modules/projects/project.repository";
 import { ISSUE_STATUS_CATEGORY, ISSUE_STATUS_ERRORS } from "./issue-status.constants";
 import * as issueStatusRepository from "./issue-status.repository";
-import type { IssueStatusRow } from "./issue-status.repository";
+import type { DbExecutor, IssueStatusRow } from "./issue-status.repository";
 import type {
   CreateIssueStatusDto,
   IssueStatusResponse,
   UpdateIssueStatusDto,
 } from "./issue-status.types";
+
+const UNIQUE_VIOLATION = "23505";
 
 class IssueStatusService {
   async create(
@@ -20,15 +23,21 @@ class IssueStatusService {
   ): Promise<IssueStatusResponse> {
     const project = await this.validateProject(projectId);
     this.validateOwner(project, userId);
-    await this.ensureUniqueName(projectId, dto.name);
 
-    const position = dto.position ?? (await this.nextPosition(projectId));
+    const status = await this.runLocked(projectId, async (tx) => {
+      await this.ensureUniqueName(projectId, dto.name, undefined, tx);
 
-    const status = await issueStatusRepository.create({
-      projectId,
-      name: dto.name,
-      category: dto.category ?? ISSUE_STATUS_CATEGORY.TODO,
-      position,
+      const position = dto.position ?? (await this.nextPosition(projectId, tx));
+
+      return issueStatusRepository.create(
+        {
+          projectId,
+          name: dto.name,
+          category: dto.category ?? ISSUE_STATUS_CATEGORY.TODO,
+          position,
+        },
+        tx,
+      );
     });
 
     logger.info({ statusId: status.id, projectId, userId }, "Issue status created");
@@ -69,15 +78,22 @@ class IssueStatusService {
     this.validateOwner(project, userId);
     await this.ensureStatusExists(projectId, statusId);
 
-    if (dto.name !== undefined) {
-      await this.ensureUniqueName(projectId, dto.name, statusId);
-    }
+    const updated = await this.runLocked(projectId, async (tx) => {
+      if (dto.name !== undefined) {
+        await this.ensureUniqueName(projectId, dto.name, statusId, tx);
+      }
 
-    const updated = await issueStatusRepository.update(statusId, dto);
+      return issueStatusRepository.update(statusId, dto, tx);
+    });
+
+    if (!updated) {
+      logger.warn({ statusId, projectId, userId }, "Status disappeared during update");
+      throw this.error("STATUS_NOT_FOUND", 404);
+    }
 
     logger.info({ statusId, projectId, userId, fields: Object.keys(dto) }, "Issue status updated");
 
-    return this.mapStatus(updated as IssueStatusRow);
+    return this.mapStatus(updated);
   }
 
   async archive(projectId: string, statusId: string, userId: string): Promise<IssueStatusResponse> {
@@ -87,9 +103,14 @@ class IssueStatusService {
 
     const updated = await issueStatusRepository.archive(statusId);
 
+    if (!updated) {
+      logger.warn({ statusId, projectId, userId }, "Status disappeared during archive");
+      throw this.error("STATUS_NOT_FOUND", 404);
+    }
+
     logger.info({ statusId, projectId, userId }, "Issue status archived");
 
-    return this.mapStatus(updated as IssueStatusRow);
+    return this.mapStatus(updated);
   }
 
   async restore(projectId: string, statusId: string, userId: string): Promise<IssueStatusResponse> {
@@ -104,9 +125,14 @@ class IssueStatusService {
 
     const updated = await issueStatusRepository.restore(statusId);
 
+    if (!updated) {
+      logger.warn({ statusId, projectId, userId }, "Status disappeared during restore");
+      throw this.error("STATUS_NOT_FOUND", 404);
+    }
+
     logger.info({ statusId, projectId, userId }, "Issue status restored");
 
-    return this.mapStatus(updated as IssueStatusRow);
+    return this.mapStatus(updated);
   }
 
   private async validateProject(projectId: string): Promise<ProjectRow> {
@@ -158,9 +184,10 @@ class IssueStatusService {
   private async ensureUniqueName(
     projectId: string,
     name: string,
-    excludeStatusId?: string,
+    excludeStatusId: string | undefined,
+    executor: DbExecutor,
   ): Promise<void> {
-    const existing = await issueStatusRepository.findByName(projectId, name);
+    const existing = await issueStatusRepository.findByName(projectId, name, executor);
 
     if (existing && existing.id !== excludeStatusId) {
       logger.warn({ projectId, name }, "Duplicate issue status name rejected");
@@ -168,10 +195,44 @@ class IssueStatusService {
     }
   }
 
-  private async nextPosition(projectId: string): Promise<number> {
-    const statuses = await issueStatusRepository.findMany(projectId);
+  private async nextPosition(projectId: string, executor: DbExecutor): Promise<number> {
+    const statuses = await issueStatusRepository.findMany(projectId, executor);
 
     return statuses.reduce((max, status) => Math.max(max, status.position), 0) + 1;
+  }
+
+  /**
+   * Runs `fn` inside a transaction holding a per-project advisory lock, so
+   * concurrent create/rename requests for the same project can't both pass a
+   * uniqueness check before either write commits. The unique(project_id, name)
+   * DB constraint is the backstop if the lock is ever bypassed; any resulting
+   * unique-violation is translated to the same 409 the pre-check throws.
+   */
+  private async runLocked<T>(projectId: string, fn: (tx: DbExecutor) => Promise<T>): Promise<T> {
+    try {
+      return await db.transaction(async (tx) => {
+        await issueStatusRepository.lockProject(tx, projectId);
+        return fn(tx);
+      });
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (this.isUniqueViolation(error)) {
+        logger.warn({ projectId }, "Duplicate issue status name rejected by database constraint");
+        throw this.error("STATUS_ALREADY_EXISTS", 409);
+      }
+      throw error;
+    }
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === UNIQUE_VIOLATION
+    );
   }
 
   private mapStatus(status: IssueStatusRow): IssueStatusResponse {

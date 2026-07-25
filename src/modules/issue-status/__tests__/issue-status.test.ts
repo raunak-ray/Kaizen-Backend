@@ -119,6 +119,37 @@ describe("Issue Status module", () => {
       expect(response.body.error.code).toBe("STATUS_ALREADY_EXISTS");
     });
 
+    it("only lets one of two concurrent same-name creates succeed", async () => {
+      const { owner, projectId } = await setupProject();
+
+      const [first, second] = await Promise.all([
+        createStatus(projectId, owner.accessToken, { name: "Concurrent" }),
+        createStatus(projectId, owner.accessToken, { name: "Concurrent" }),
+      ]);
+
+      const statuses = [first, second];
+      const succeeded = statuses.filter((res) => res.status === 201);
+      const conflicted = statuses.filter((res) => res.status === 409);
+
+      expect(succeeded).toHaveLength(1);
+      expect(conflicted).toHaveLength(1);
+      expect(conflicted[0]?.body.error.code).toBe("STATUS_ALREADY_EXISTS");
+    });
+
+    it("assigns distinct positions to two concurrent creates with no explicit position", async () => {
+      const { owner, projectId } = await setupProject();
+
+      const [first, second] = await Promise.all([
+        createStatus(projectId, owner.accessToken, { name: "Concurrent A" }),
+        createStatus(projectId, owner.accessToken, { name: "Concurrent B" }),
+      ]);
+
+      expect(first.status).toBe(201);
+      expect(second.status).toBe(201);
+      expect(first.body.data.position).not.toBe(second.body.data.position);
+      expect([first.body.data.position, second.body.data.position].sort()).toEqual([1, 2]);
+    });
+
     it("rejects creation in a nonexistent project", async () => {
       const { accessToken } = await registerUser();
 
@@ -273,6 +304,28 @@ describe("Issue Status module", () => {
 
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe("STATUS_ALREADY_EXISTS");
+    });
+
+    it("only lets one of two concurrent renames to the same name succeed", async () => {
+      const { owner, projectId } = await setupProject();
+      const a = await createStatus(projectId, owner.accessToken, { name: "Status A" });
+      const b = await createStatus(projectId, owner.accessToken, { name: "Status B" });
+
+      const rename = (id: string) =>
+        request(app)
+          .patch(`${statusesUrl(projectId)}/${id}`)
+          .set("Authorization", `Bearer ${owner.accessToken}`)
+          .send({ name: "Renamed" });
+
+      const [first, second] = await Promise.all([rename(a.body.data.id), rename(b.body.data.id)]);
+
+      const responses = [first, second];
+      const succeeded = responses.filter((res) => res.status === 200);
+      const conflicted = responses.filter((res) => res.status === 409);
+
+      expect(succeeded).toHaveLength(1);
+      expect(conflicted).toHaveLength(1);
+      expect(conflicted[0]?.body.error.code).toBe("STATUS_ALREADY_EXISTS");
     });
   });
 

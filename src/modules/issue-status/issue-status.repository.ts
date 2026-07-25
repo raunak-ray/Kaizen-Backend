@@ -1,9 +1,14 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@db/client";
 import { IssueStatus } from "@db/schema";
 import type { IssueStatusCategory } from "./issue-status.types";
 
 export type IssueStatusRow = typeof IssueStatus.$inferSelect;
+
+// The tx handle drizzle passes into a db.transaction() callback. Repository
+// functions that participate in a transaction accept this in place of `db`.
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DbExecutor = typeof db | Transaction;
 
 interface CreateIssueStatusInput {
   projectId: string;
@@ -18,8 +23,22 @@ interface UpdateIssueStatusInput {
   position?: number;
 }
 
-export async function create(input: CreateIssueStatusInput): Promise<IssueStatusRow> {
-  const [status] = await db
+/**
+ * Serializes concurrent create/rename operations for the same project using a
+ * transaction-scoped Postgres advisory lock. Must be called as the first
+ * statement inside the transaction that performs the uniqueness check and the
+ * subsequent write, so two concurrent requests for the same project can't
+ * both pass the check before either write commits.
+ */
+export async function lockProject(executor: DbExecutor, projectId: string): Promise<void> {
+  await executor.execute(sql`select pg_advisory_xact_lock(hashtext(${projectId}))`);
+}
+
+export async function create(
+  input: CreateIssueStatusInput,
+  executor: DbExecutor = db,
+): Promise<IssueStatusRow> {
+  const [status] = await executor
     .insert(IssueStatus)
     .values({
       project_id: input.projectId,
@@ -44,8 +63,11 @@ export async function findById(
   return status;
 }
 
-export async function findMany(projectId: string): Promise<IssueStatusRow[]> {
-  return db
+export async function findMany(
+  projectId: string,
+  executor: DbExecutor = db,
+): Promise<IssueStatusRow[]> {
+  return executor
     .select()
     .from(IssueStatus)
     .where(eq(IssueStatus.project_id, projectId))
@@ -55,8 +77,9 @@ export async function findMany(projectId: string): Promise<IssueStatusRow[]> {
 export async function update(
   statusId: string,
   input: UpdateIssueStatusInput,
+  executor: DbExecutor = db,
 ): Promise<IssueStatusRow | undefined> {
-  const [status] = await db
+  const [status] = await executor
     .update(IssueStatus)
     .set({
       ...(input.name !== undefined && { name: input.name }),
@@ -97,8 +120,9 @@ export async function exists(projectId: string, statusId: string): Promise<boole
 export async function findByName(
   projectId: string,
   name: string,
+  executor: DbExecutor = db,
 ): Promise<IssueStatusRow | undefined> {
-  const [status] = await db
+  const [status] = await executor
     .select()
     .from(IssueStatus)
     .where(and(eq(IssueStatus.project_id, projectId), eq(IssueStatus.name, name)));
