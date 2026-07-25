@@ -5,6 +5,10 @@ project — creation, listing, retrieval, renaming/reordering, archiving, and re
 not own workflow transitions, custom workflows, workflow schemes, or permission-based transitions;
 those are deferred to future modules so this one stays a simple, self-contained lookup domain.
 
+> Looking for the "why" behind these decisions, or a non-technical explanation? See
+> [`docs/issue-status/`](../../../docs/issue-status/overview.md). This README covers the "what" and
+> "how" for developers working in this module.
+
 ## Structure
 
 ```text

@@ -128,7 +128,8 @@ backend/
 │   ├── auth/
 │   ├── projects/
 │   ├── project-members/
-│   └── issues/
+│   ├── issues/
+│   └── issue-status/
 │
 ├── src/
 │   ├── app.ts           # Express app: middleware, swagger, routes, error handling
@@ -147,7 +148,8 @@ backend/
 │       ├── auth/            # registration, login, refresh rotation, logout, /me
 │       ├── projects/        # project creation, ownership, visibility, archiving
 │       ├── project-members/ # project-scoped membership and roles
-│       └── issues/           # issue lifecycle: create, assign, status, priority, archive, delete
+│       ├── issues/           # issue lifecycle: create, assign, status, priority, archive, delete
+│       └── issue-status/     # per-project issue status lookup: create, list, update, archive, restore
 │           └── README.md    # per-module: implementation reference, folder-by-folder
 │
 ├── tests/
@@ -231,5 +233,8 @@ available to issues within a project (create, list, get, update, archive, restor
 project owner may create, update, archive, or restore statuses; any project member may list or
 read them. Workflow transitions and custom workflows are deferred to future modules.
 
+- New to the project or non-technical? Start with
+  [`docs/issue-status/overview.md`](docs/issue-status/overview.md).
 - Working in the code? See
   [`src/modules/issue-status/README.md`](src/modules/issue-status/README.md).
+- Full docs set: [`docs/issue-status/`](docs/issue-status/overview.md).
