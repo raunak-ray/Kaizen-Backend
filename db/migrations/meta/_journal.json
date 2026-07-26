@@ -50,6 +50,13 @@
       "when": 1784895259626,
       "tag": "0006_add_issues_table",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784989780528,
+      "tag": "0007_woozy_wither",
+      "breakpoints": true
     }
   ]
 }

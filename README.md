@@ -1,15 +1,16 @@
 # Kaizen Backend
 
 Production-ready Express + TypeScript backend for Kaizen, a project/issue-tracking product. Ships
-with a foundation scaffold (config, error handling, response envelope, validation) plus four
+with a foundation scaffold (config, error handling, response envelope, validation) plus five
 complete domain modules:
 
-| Module          | Owns                                                                   | Module README                                                                    |
-| --------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Authentication  | Accounts, JWT sessions, rate limiting, audit logging                   | [`src/modules/auth/README.md`](src/modules/auth/README.md)                       |
-| Projects        | Project creation, ownership, visibility, archiving                     | [`src/modules/projects/README.md`](src/modules/projects/README.md)               |
-| Project Members | Project-scoped membership and roles                                    | [`src/modules/project-members/README.md`](src/modules/project-members/README.md) |
-| Issues          | Work item lifecycle: create, assign, status, priority, archive, delete | [`src/modules/issues/README.md`](src/modules/issues/README.md)                   |
+| Module          | Owns                                                                    | Module README                                                                    |
+| --------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Authentication  | Accounts, JWT sessions, rate limiting, audit logging                    | [`src/modules/auth/README.md`](src/modules/auth/README.md)                       |
+| Projects        | Project creation, ownership, visibility, archiving                      | [`src/modules/projects/README.md`](src/modules/projects/README.md)               |
+| Project Members | Project-scoped membership and roles                                     | [`src/modules/project-members/README.md`](src/modules/project-members/README.md) |
+| Issues          | Work item lifecycle: create, assign, status, priority, archive, delete  | [`src/modules/issues/README.md`](src/modules/issues/README.md)                   |
+| Issue Status    | Per-project issue status lookup: create, list, update, archive, restore | [`src/modules/issue-status/README.md`](src/modules/issue-status/README.md)       |
 
 ## Stack
 
@@ -68,8 +69,9 @@ npm run db:studio     # open Drizzle Studio
 ```
 
 Schemas live in `db/schema/`, generated SQL migrations in `db/migrations/`. Current tables:
-`tbl_user`, `tbl_project`, `tbl_project_member`, `tbl_issue` — one schema file per module, each
-exported from `db/schema/index.ts`. Future modules add their schema files here the same way.
+`tbl_user`, `tbl_project`, `tbl_project_member`, `tbl_issue`, `tbl_issue_status` — one schema file
+per module, each exported from `db/schema/index.ts`. Future modules add their schema files here
+the same way.
 
 ## API Documentation
 
@@ -126,7 +128,8 @@ backend/
 │   ├── auth/
 │   ├── projects/
 │   ├── project-members/
-│   └── issues/
+│   ├── issues/
+│   └── issue-status/
 │
 ├── src/
 │   ├── app.ts           # Express app: middleware, swagger, routes, error handling
@@ -145,7 +148,8 @@ backend/
 │       ├── auth/            # registration, login, refresh rotation, logout, /me
 │       ├── projects/        # project creation, ownership, visibility, archiving
 │       ├── project-members/ # project-scoped membership and roles
-│       └── issues/           # issue lifecycle: create, assign, status, priority, archive, delete
+│       ├── issues/           # issue lifecycle: create, assign, status, priority, archive, delete
+│       └── issue-status/     # per-project issue status lookup: create, list, update, archive, restore
 │           └── README.md    # per-module: implementation reference, folder-by-folder
 │
 ├── tests/
@@ -221,3 +225,16 @@ membership.
   [`docs/issues/overview.md`](docs/issues/overview.md).
 - Working in the code? See [`src/modules/issues/README.md`](src/modules/issues/README.md).
 - Full docs set: [`docs/issues/`](docs/issues/overview.md).
+
+### Issue Status
+
+A complete Issue Status module lives at `src/modules/issue-status/` — the lifecycle states
+available to issues within a project (create, list, get, update, archive, restore). Only the
+project owner may create, update, archive, or restore statuses; any project member may list or
+read them. Workflow transitions and custom workflows are deferred to future modules.
+
+- New to the project or non-technical? Start with
+  [`docs/issue-status/overview.md`](docs/issue-status/overview.md).
+- Working in the code? See
+  [`src/modules/issue-status/README.md`](src/modules/issue-status/README.md).
+- Full docs set: [`docs/issue-status/`](docs/issue-status/overview.md).

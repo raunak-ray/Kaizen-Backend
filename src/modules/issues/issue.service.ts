@@ -82,9 +82,14 @@ class IssueService {
 
     const updated = await issueRepository.update(issueId, dto);
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during update");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info({ issueId, projectId, userId, fields: Object.keys(dto) }, "Issue updated");
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async assign(
@@ -103,12 +108,17 @@ class IssueService {
 
     const updated = await issueRepository.update(issueId, { assigneeId: dto.assigneeId });
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during assignment");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info(
       { issueId, projectId, userId, assigneeId: dto.assigneeId },
       "Issue assignment updated",
     );
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async changeStatus(
@@ -123,9 +133,14 @@ class IssueService {
 
     const updated = await issueRepository.update(issueId, { status: dto.status });
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during status change");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info({ issueId, projectId, userId, status: dto.status }, "Issue status changed");
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async changePriority(
@@ -140,9 +155,14 @@ class IssueService {
 
     const updated = await issueRepository.update(issueId, { priority: dto.priority });
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during priority change");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info({ issueId, projectId, userId, priority: dto.priority }, "Issue priority changed");
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async archive(projectId: string, issueId: string, userId: string): Promise<IssueResponse> {
@@ -151,9 +171,14 @@ class IssueService {
 
     const updated = await issueRepository.archive(issueId);
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during archive");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info({ issueId, projectId, userId }, "Issue archived");
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async restore(projectId: string, issueId: string, userId: string): Promise<IssueResponse> {
@@ -167,9 +192,14 @@ class IssueService {
 
     const updated = await issueRepository.restore(issueId);
 
+    if (!updated) {
+      logger.warn({ issueId, projectId, userId }, "Issue disappeared during restore");
+      throw this.error("ISSUE_NOT_FOUND", 404);
+    }
+
     logger.info({ issueId, projectId, userId }, "Issue restored");
 
-    return this.mapIssue(updated as IssueRow);
+    return this.mapIssue(updated);
   }
 
   async remove(projectId: string, issueId: string, userId: string): Promise<void> {
