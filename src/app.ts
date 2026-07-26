@@ -14,6 +14,7 @@ import { healthRouter } from "./routes/health";
 import authRouter from "@/modules/auth/auth.routes";
 import issuePriorityRouter from "@/modules/issue-priority/issue-priority.routes";
 import issueStatusRouter from "@/modules/issue-status/issue-status.routes";
+import issueTypeRouter from "@/modules/issue-type/issue-type.routes";
 import issueRouter from "@/modules/issues/issue.routes";
 import projectRouter from "@/modules/projects/project.routes";
 import projectMemberRouter from "@/modules/project-members/project-member.routes";
@@ -72,6 +73,7 @@ export function createApp(): Application {
   app.use(`${env.API_PREFIX}/projects/:projectId/issues`, issueRouter);
   app.use(`${env.API_PREFIX}/projects/:projectId/statuses`, issueStatusRouter);
   app.use(`${env.API_PREFIX}/projects/:projectId/priorities`, issuePriorityRouter);
+  app.use(`${env.API_PREFIX}/projects/:projectId/types`, issueTypeRouter);
 
   app.use(notFoundHandler);
   app.use(globalErrorHandler);
