@@ -4,7 +4,7 @@ CREATE TABLE "tbl_issue_label" (
 	"name" varchar(255) NOT NULL,
 	"color" varchar(7) NOT NULL,
 	"description" varchar(255),
-	"archieved" boolean DEFAULT false NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "uq_issue_label_project_name" UNIQUE("project_id","name")

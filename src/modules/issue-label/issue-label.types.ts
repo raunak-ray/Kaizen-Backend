@@ -16,7 +16,7 @@ export interface IssueLabelResponse {
   projectId: string;
   color: string;
   description: string | null;
-  archieved: boolean;
+  archived: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

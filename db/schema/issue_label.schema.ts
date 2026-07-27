@@ -11,7 +11,7 @@ export const IssueLabel = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     color: varchar("color", { length: 7 }).notNull(),
     description: varchar("description", { length: 255 }),
-    archieved: boolean("archieved").default(false).notNull(),
+    archived: boolean("archived").default(false).notNull(),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),
   },

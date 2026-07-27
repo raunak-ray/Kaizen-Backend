@@ -2,6 +2,8 @@ import { db } from "@db/client";
 import { IssueLabel } from "@db/schema";
 import { and, eq } from "drizzle-orm";
 
+export type IssueLabelRow = typeof IssueLabel.$inferSelect;
+
 interface CreateIssueLabelInput {
   projectId: string;
   name: string;
@@ -48,6 +50,7 @@ export async function update(labelId: string, input: UpdateIssueLabelInput) {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.color !== undefined && { color: input.color }),
+      updated_at: new Date(),
     })
     .where(eq(IssueLabel.id, labelId))
     .returning();
@@ -58,7 +61,7 @@ export async function update(labelId: string, input: UpdateIssueLabelInput) {
 export async function archive(labelId: string) {
   const [label] = await db
     .update(IssueLabel)
-    .set({ archieved: true, updated_at: new Date() })
+    .set({ archived: true, updated_at: new Date() })
     .where(eq(IssueLabel.id, labelId))
     .returning();
   return label;
@@ -67,7 +70,7 @@ export async function archive(labelId: string) {
 export async function restore(labelId: string) {
   const [label] = await db
     .update(IssueLabel)
-    .set({ archieved: false, updated_at: new Date() })
+    .set({ archived: false, updated_at: new Date() })
     .where(eq(IssueLabel.id, labelId))
     .returning();
   return label;
