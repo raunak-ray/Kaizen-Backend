@@ -5,3 +5,4 @@ export { Issue, issuePriorityEnum, issueStatusEnum, issueTypeEnum } from "./issu
 export { IssueStatus, issueStatusCategoryEnum } from "./issue_status.schema";
 export { IssuePriority } from "./issue_priority.schema";
 export { IssueType } from "./issue_type.schema";
+export { IssueLabel } from "./issue_label.schema";
